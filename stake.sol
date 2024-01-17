@@ -153,6 +153,10 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
     }
     return earnings;
   }
+  
+  function getEarningsPercentage(address _user, uint16 _index, uint8 _month, bool _isVested) public view returns (uint256) {
+    return _realPercentage(_user, _index, _month, _isVested);
+  }
 
   //endregion
 
@@ -238,9 +242,9 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
   }
 
   //Default Lock Periods
-  uint8 public constant LOCK_PERIOD_1 = 1; //1 month
-  uint8 public constant LOCK_PERIOD_2 = 2; //2 month
-  uint8 public constant LOCK_PERIOD_3 = 3; //3 month
+  uint8 public constant LOCK_PERIOD_1 = 3; //1 month
+  uint8 public constant LOCK_PERIOD_2 = 6; //2 month
+  uint8 public constant LOCK_PERIOD_3 = 9; //3 month
 
   //Default Multipliers values
   uint8 public constant MULTIPLIER_1 = 50; //30 days = 50%
@@ -340,14 +344,14 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
 
   function getStakeMultiplier(address _user, uint16 _index) public view returns (uint8) {
     uint8 monthsSinceLastWithdrawn;
-    uint8 totalMonths;
-
     monthsSinceLastWithdrawn = currentMonth - stakes[_user][_index].lastWithdrawnMonth;
-    totalMonths = stakes[_user][_index].endLockMonth - stakes[_user][_index].startLockMonth;
-
-    if (monthsSinceLastWithdrawn >= 2 || totalMonths >= 3) {
+    
+    
+    if(stakes[_user][_index].totalWithdrawn == 0) {
       return MULTIPLIER_3;
-    } else if (monthsSinceLastWithdrawn == 1 || totalMonths == 2) {
+    } else if (monthsSinceLastWithdrawn >= 2 ) {
+      return MULTIPLIER_3;
+    } else if (monthsSinceLastWithdrawn == 1) {
       return MULTIPLIER_2;
     } else {
       return MULTIPLIER_1;
@@ -437,16 +441,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     bool claimedTGE;
   }
 
-  //Default Lock Periods
-  uint8 public constant LOCK_PERIOD_1 = 1; //1 month
-  uint8 public constant LOCK_PERIOD_2 = 2; //2 month
-  uint8 public constant LOCK_PERIOD_3 = 3; //3 month
-
-  //Default Multipliers values
-  uint8 public constant MULTIPLIER_1 = 50; //30 days = 50%
-  uint8 public constant MULTIPLIER_2 = 75; //60 days = 75%
-  uint8 public constant MULTIPLIER_3 = 100; //90 days = 100%
-
+  
   mapping(address => VestedStake[]) public stakes;
 
   mapping(uint8 => uint256) public totalMonthStaked;
@@ -536,7 +531,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
   }
 
   function getStakeMultiplier() public pure returns (uint8) {
-    return MULTIPLIER_3;
+    return 100;
   }
 
   function getAvailableWithdrawal(address _user, uint16 _index) public view returns (uint256) {
@@ -563,21 +558,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
       return 0;
     }
   }
-
-  function getVariables() public view returns (uint8[] memory, uint8[] memory, uint8) {
-    uint8[] memory periods = new uint8[](3);
-    periods[0] = LOCK_PERIOD_1;
-    periods[1] = LOCK_PERIOD_2;
-    periods[2] = LOCK_PERIOD_3;
-
-    uint8[] memory multipliers = new uint8[](3);
-    multipliers[0] = MULTIPLIER_1;
-    multipliers[1] = MULTIPLIER_2;
-    multipliers[2] = MULTIPLIER_3;
-
-    return (periods, multipliers, currentMonth);
-  }
-
+  
   function getStakeWithdrawals(address _user, uint16 _index) public view returns (uint256[] memory) {
 
     uint256[] memory withdrawals = new uint256[](currentMonth + 1);
