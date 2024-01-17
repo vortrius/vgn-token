@@ -242,9 +242,9 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
   }
 
   //Default Lock Periods
-  uint8 public constant LOCK_PERIOD_1 = 3; //1 month
-  uint8 public constant LOCK_PERIOD_2 = 6; //2 month
-  uint8 public constant LOCK_PERIOD_3 = 9; //3 month
+  uint8 public constant LOCK_PERIOD_1 = 3; //3 months
+  uint8 public constant LOCK_PERIOD_2 = 6; //6 months
+  uint8 public constant LOCK_PERIOD_3 = 9; //9 months
 
   //Default Multipliers values
   uint8 public constant MULTIPLIER_1 = 50; //30 days = 50%
