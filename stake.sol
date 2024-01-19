@@ -255,8 +255,6 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
 
   mapping(uint8 => uint256) public totalMonthStaked;
 
-  mapping(address => mapping(uint8 => mapping(uint16 => bool))) public monthHarvested;
-
   mapping(address => mapping(uint16 => mapping(uint8 => uint256))) public stakeWithdrawals;
 
   //endregion
