@@ -153,7 +153,7 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
     }
     return earnings;
   }
-  
+
   function getEarningsPercentage(address _user, uint16 _index, uint8 _month, bool _isVested) public view returns (uint256) {
     return _realPercentage(_user, _index, _month, _isVested);
   }
@@ -343,11 +343,11 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
   function getStakeMultiplier(address _user, uint16 _index) public view returns (uint8) {
     uint8 monthsSinceLastWithdrawn;
     monthsSinceLastWithdrawn = currentMonth - stakes[_user][_index].lastWithdrawnMonth;
-    
-    
-    if(stakes[_user][_index].totalWithdrawn == 0) {
+
+
+    if (stakes[_user][_index].totalWithdrawn == 0) {
       return MULTIPLIER_3;
-    } else if (monthsSinceLastWithdrawn >= 2 ) {
+    } else if (monthsSinceLastWithdrawn >= 2) {
       return MULTIPLIER_3;
     } else if (monthsSinceLastWithdrawn == 1) {
       return MULTIPLIER_2;
@@ -439,7 +439,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     bool claimedTGE;
   }
 
-  
+
   mapping(address => VestedStake[]) public stakes;
 
   mapping(uint8 => uint256) public totalMonthStaked;
@@ -454,6 +454,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
   event StakeCreated(address indexed user, VestedStake stake);
   event Withdraw(address indexed user, uint16 indexed index, uint8 indexed month, uint256 amount, uint256 multiplier);
   event ClaimedTGE(address indexed user, uint16 indexed index, uint8 indexed month, uint256 amount);
+  event Transfer(address indexed from, address indexed to, uint16 indexed index, VestedStake stake);
 
   //endregion
 
@@ -556,7 +557,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
       return 0;
     }
   }
-  
+
   function getStakeWithdrawals(address _user, uint16 _index) public view returns (uint256[] memory) {
 
     uint256[] memory withdrawals = new uint256[](currentMonth + 1);
@@ -616,6 +617,29 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
 
   function updateCurrentMonth(uint8 _month) public onlyRole(REWARDS_ROLE) {
     currentMonth = _month;
+  }
+
+  function transfer(address _from, address _to, uint16 _index, uint256 _amount) public onlyRole(STAKE_CREATOR) nonReentrant {
+    require(stakes[_from].length > _index, "TII"); //TII: Transfer: Invalid index
+    require(!stakes[_from][_index].inactive, "TSI"); //TSI: Transfer: Stake is inactive
+    require(_from != _to, "TSFT"); //TSFT: Transfer: Can't transfer to same address
+    require(_amount > 0, "TAMZ"); //TAMZ: Transfer: Amount must be greater 0
+    require(stakes[_from][_index].totalAmount >= _amount, "TIB"); //TIB: Transfer: Insufficient balance
+    require(stakes[_from][_index].claimedTGE, "TSC"); //TSC: Transfer: TGE not claimed yet
+
+
+    stakes[_from][_index].totalAmount -= _amount;
+    stakes[_to].push(
+      VestedStake(_amount, stakes[_from][_index].endLockMonth, stakes[_from][_index].startLockMonth, 0, stakes[_from][_index].lastWithdrawnMonth, stakes[_from][_index].endVestingMonth, stakes[_from][_index].startVestingMonth, false, true)
+    );
+
+    if (stakes[_from][_index].totalAmount == 0) {
+      stakes[_from][_index].inactive = true;
+    }
+
+    emit Transfer(_from, _to, _index, stakes[_to][stakes[_to].length - 1]);
+
+
   }
 
   //endregion
