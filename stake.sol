@@ -357,9 +357,7 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
   }
 
   function getAvailableWithdrawal(address _user, uint16 _index) public view returns (uint256) {
-    uint256 totalAmount = stakes[_user][_index].totalAmount;
-    uint256 totalWithdrawn = stakes[_user][_index].totalWithdrawn;
-    return totalAmount - totalWithdrawn;
+    return stakes[_user][_index].totalAmount - stakes[_user][_index].totalWithdrawn;
   }
 
   function getVariables() public view returns (uint8[] memory, uint8[] memory, uint8) {
@@ -542,6 +540,10 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
       ? stakes[_user][_index].totalAmount
       : stakes[_user][_index].totalAmount / vestingMonths;
     uint256 monthsSinceStart = currentMonth - stakes[_user][_index].startVestingMonth;
+    
+    if(monthsSinceStart > vestingMonths) {
+      return stakes[_user][_index].totalAmount - stakes[_user][_index].totalWithdrawn; 
+    }
 
     uint256 availableForWithdrawal = vestingMonths == 0
       ? stakes[_user][_index].totalAmount
