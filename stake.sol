@@ -541,7 +541,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
       : stakes[_user][_index].totalAmount / vestingMonths;
     uint256 monthsSinceStart = currentMonth - stakes[_user][_index].startVestingMonth;
     
-    if(monthsSinceStart > vestingMonths) {
+    if(monthsSinceStart >= vestingMonths) {
       return stakes[_user][_index].totalAmount - stakes[_user][_index].totalWithdrawn; 
     }
 
