@@ -35,8 +35,15 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
 
   //region Events
 
-
-  event Harvested(address indexed user, uint16 indexed index, uint8 indexed month, bool isVested, uint256 usdt, uint256 vgn, uint256 eth);
+  event Harvested(
+    address indexed user,
+    uint16 indexed index,
+    uint8 indexed month,
+    bool isVested,
+    uint256 usdt,
+    uint256 vgn,
+    uint256 eth
+  );
   event Deposited(uint8 month, uint256 usdt, uint256 vgn, uint256 eth);
   event IncrementedMonth(uint8 lastMonth, uint8 currentMonth);
 
@@ -109,8 +116,6 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
     if (earnings.eth > 0) {
       payable(msg.sender).transfer(totalEth);
     }
-
-
   }
 
   //endregion
@@ -154,7 +159,12 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
     return earnings;
   }
 
-  function getEarningsPercentage(address _user, uint16 _index, uint8 _month, bool _isVested) public view returns (uint256) {
+  function getEarningsPercentage(
+    address _user,
+    uint16 _index,
+    uint8 _month,
+    bool _isVested
+  ) public view returns (uint256) {
     return _realPercentage(_user, _index, _month, _isVested);
   }
 
@@ -172,7 +182,6 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
     //DAD: Deposit: Already deposited for this month
     require(!monthEarnings[currentMonth].deposited, "DAD");
 
-
     monthEarnings[currentMonth].usdt = _usdt;
     monthEarnings[currentMonth].vgn = _vgn;
     monthEarnings[currentMonth].eth = msg.value;
@@ -181,11 +190,11 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
     usdt.safeTransferFrom(msg.sender, address(this), _usdt);
     token.safeTransferFrom(msg.sender, address(this), _vgn);
 
-
     emit Deposited(currentMonth, _usdt, _vgn, msg.value);
+    _incrementMonth();
   }
 
-  function incrementMonth() public nonReentrant onlyRole(DEPOSITOR_ROLE) {
+  function _incrementMonth() internal {
     uint8 lastMonth = currentMonth;
     currentMonth++;
     stakeContract.updateTotalMonthStaked(lastMonth, currentMonth);
@@ -284,7 +293,6 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
     require(_lockPeriod > 0 && _lockPeriod <= 3, "SILP");
     uint8 lockPeriod = _lockPeriod == 1 ? LOCK_PERIOD_1 : _lockPeriod == 2 ? LOCK_PERIOD_2 : LOCK_PERIOD_3;
 
-
     totalMonthStaked[currentMonth] += _amount;
     stakes[msg.sender].push(Stake(_amount, currentMonth + lockPeriod, currentMonth, 0, currentMonth, false));
 
@@ -343,7 +351,6 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
   function getStakeMultiplier(address _user, uint16 _index) public view returns (uint8) {
     uint8 monthsSinceLastWithdrawn;
     monthsSinceLastWithdrawn = currentMonth - stakes[_user][_index].lastWithdrawnMonth;
-
 
     if (stakes[_user][_index].totalWithdrawn == 0) {
       return MULTIPLIER_3;
@@ -411,7 +418,6 @@ contract VGNStake is Initializable, AccessControlUpgradeable, ReentrancyGuardUpg
   }
 
   //endregion
-
 }
 
 /// @custom:security-contact support@vortrius.com
@@ -437,7 +443,6 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     bool claimedTGE;
   }
 
-
   mapping(address => VestedStake[]) public stakes;
 
   mapping(uint8 => uint256) public totalMonthStaked;
@@ -447,7 +452,6 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
   //endregion
 
   //region Events
-
 
   event StakeCreated(address indexed user, VestedStake stake);
   event Withdraw(address indexed user, uint16 indexed index, uint8 indexed month, uint256 amount, uint256 multiplier);
@@ -488,6 +492,8 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
       stakes[msg.sender][_index].inactive = true;
     }
 
+    totalMonthStaked[currentMonth] += _amount;
+    stakeWithdrawals[msg.sender][_index][currentMonth] += _amount;
     token.safeTransfer(msg.sender, _amount);
     emit Withdraw(msg.sender, _index, currentMonth, _amount, getStakeMultiplier());
   }
@@ -540,9 +546,9 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
       ? stakes[_user][_index].totalAmount
       : stakes[_user][_index].totalAmount / vestingMonths;
     uint256 monthsSinceStart = currentMonth - stakes[_user][_index].startVestingMonth;
-    
-    if(monthsSinceStart >= vestingMonths) {
-      return stakes[_user][_index].totalAmount - stakes[_user][_index].totalWithdrawn; 
+
+    if (monthsSinceStart >= vestingMonths) {
+      return stakes[_user][_index].totalAmount - stakes[_user][_index].totalWithdrawn;
     }
 
     uint256 availableForWithdrawal = vestingMonths == 0
@@ -561,7 +567,6 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
   }
 
   function getStakeWithdrawals(address _user, uint16 _index) public view returns (uint256[] memory) {
-
     uint256[] memory withdrawals = new uint256[](currentMonth + 1);
     for (uint8 i = 0; i <= currentMonth; i++) {
       withdrawals[i] = stakeWithdrawals[_user][_index][i];
@@ -600,10 +605,10 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     //SIB: Stake: Insufficient balance
     require(token.balanceOf(msg.sender) >= _amount, "SIB");
 
-
     uint8 endLockMonth = currentMonth + _lockMonths;
     uint8 endVestingMonth = endLockMonth + _vestingMonths;
 
+    totalMonthStaked[currentMonth] += _amount;
     stakes[_address].push(
       VestedStake(_amount, endLockMonth, currentMonth, 0, currentMonth, endVestingMonth, endLockMonth, false, false)
     );
@@ -621,7 +626,12 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     currentMonth = _month;
   }
 
-  function transfer(address _from, address _to, uint16 _index, uint256 _amount) public onlyRole(STAKE_CREATOR) nonReentrant {
+  function transfer(
+    address _from,
+    address _to,
+    uint16 _index,
+    uint256 _amount
+  ) public onlyRole(STAKE_CREATOR) nonReentrant {
     require(stakes[_from].length > _index, "TII"); //TII: Transfer: Invalid index
     require(!stakes[_from][_index].inactive, "TSI"); //TSI: Transfer: Stake is inactive
     require(_from != _to, "TSFT"); //TSFT: Transfer: Can't transfer to same address
@@ -629,10 +639,19 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     require(stakes[_from][_index].totalAmount >= _amount, "TIB"); //TIB: Transfer: Insufficient balance
     require(stakes[_from][_index].claimedTGE, "TSC"); //TSC: Transfer: TGE not claimed yet
 
-
     stakes[_from][_index].totalAmount -= _amount;
     stakes[_to].push(
-      VestedStake(_amount, stakes[_from][_index].endLockMonth, stakes[_from][_index].startLockMonth, 0, stakes[_from][_index].lastWithdrawnMonth, stakes[_from][_index].endVestingMonth, stakes[_from][_index].startVestingMonth, false, true)
+      VestedStake(
+        _amount,
+        stakes[_from][_index].endLockMonth,
+        stakes[_from][_index].startLockMonth,
+        0,
+        stakes[_from][_index].lastWithdrawnMonth,
+        stakes[_from][_index].endVestingMonth,
+        stakes[_from][_index].startVestingMonth,
+        false,
+        true
+      )
     );
 
     if (stakes[_from][_index].totalAmount == 0) {
@@ -640,11 +659,7 @@ contract VGNVestedStake is Initializable, AccessControlUpgradeable, ReentrancyGu
     }
 
     emit Transfer(_from, _to, _index, stakes[_to][stakes[_to].length - 1]);
-
-
   }
 
   //endregion
-
-
 }
