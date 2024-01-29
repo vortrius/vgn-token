@@ -211,17 +211,17 @@ contract VGNRewards is Initializable, AccessControlUpgradeable, ReentrancyGuardU
   function _realPercentage(address _user, uint16 _index, uint8 _month, bool _isVested) internal view returns (uint256) {
     uint256 available;
     uint8 multiplier;
-    uint256 totalStake;
+
+    uint256 totalStake = vestedStakeContract.totalMonthStaked(_month) + stakeContract.totalMonthStaked(_month);
+
     if (_isVested) {
       VGNVestedStake.VestedStake memory vestedStake = vestedStakeContract.getStakeAtIndex(_user, _index);
       available = (vestedStake.totalAmount - vestedStake.totalWithdrawn);
       multiplier = vestedStakeContract.getStakeMultiplier();
-      totalStake = vestedStakeContract.totalMonthStaked(_month);
     } else {
       VGNStake.Stake memory stake = stakeContract.getStakeAtIndex(_user, _index);
       available = (stake.totalAmount - stake.totalWithdrawn);
       multiplier = stakeContract.getStakeMultiplier(_user, _index);
-      totalStake = stakeContract.totalMonthStaked(_month);
     }
     uint256 percentage = (available * 1 ether) / totalStake;
 
